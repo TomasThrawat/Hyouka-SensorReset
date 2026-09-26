@@ -110,7 +110,7 @@ class SystemSensorResetUserService : ISystemSensorResetService.Stub() {
     }
 
     private fun sanitize(output: String): String {
-        return output.replace("
+        return output.replace("\n", " ").replace("|", "/").take(MAX_OUTPUT)
 ", " ").replace("|", "/").take(MAX_OUTPUT)
     }
 
@@ -121,8 +121,8 @@ class SystemSensorResetUserService : ISystemSensorResetService.Stub() {
         private const val MAX_OUTPUT = 240
         private const val RESTART_VERIFY_TIMEOUT_MS = 2_500L
         private const val RESTART_VERIFY_POLL_MS = 100L
-        private val PACKAGE_NAME_PATTERN = Regex("[A-Za-z0-9_\.]+")
-        private val INIT_PROPERTY_PATTERN = Regex("\[([^]]+)\]\s*:\s*\[([^]]*)\]")
+        private val PACKAGE_NAME_PATTERN = Regex("[A-Za-z0-9_.]+")
+        private val INIT_PROPERTY_PATTERN = Regex("""\[([^]]+)\]\s*:\s*\[([^]]*)\]""")
         private val SENSOR_HAL_INTERFACES = listOf(
             "android.hardware.sensors@2.1::ISensors/default",
             "android.hardware.sensors@2.0::ISensors/default",
