@@ -1,6 +1,6 @@
 # Hyouka-SensorReset
 
-Native Kotlin Android utility for reinitializing the app's motion-sensor session and inspecting sensor behavior exposed through Android public sensor APIs.
+Native Kotlin Android utility for reinitializing motion sensors through Android SensorService when Shizuku is authorized, with app-level fallback and detailed diagnostics.
 
 ## Included
 
@@ -29,3 +29,16 @@ The GitHub Actions workflow uses JDK 17, Gradle 9.4.1, Android Gradle Plugin 9.2
 
 Minimum Android API: 26  
 Target Android API: 36
+
+
+## System sensor restart
+
+The Restart action first attempts a system SensorService cycle through a Shizuku UserService:
+
+1. dumpsys sensorservice restrict <this package>
+2. dumpsys sensorservice enable
+3. Re-register this app's sensor listeners.
+
+AOSP documents the restrict transition as temporarily disabling sensors and the enable transition as restoring normal operation and re-enabling them. This is a system sensor-service/HAL activation cycle, not a vendor driver rebind, firmware reboot, or physical power-cycle. The cycle can briefly affect other apps that use sensors.
+
+Shizuku is required for this path. Without it, the app performs only its normal listener reinitialization and reports the fallback explicitly.
