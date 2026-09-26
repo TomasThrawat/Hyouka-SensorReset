@@ -146,5 +146,7 @@ data class SensorUiState(
     val lastCalibrationResult: CalibrationSessionResult?,
     val comparisons: Map<MotionSensor, VectorComparison?>,
     val history: List<ResetHistoryEntry>,
-    val logs: List<String>
+    val logs: List<String>,
+    val restartInProgress: Boolean = false,
+    val systemResetStatus: String = "Not attempted"
 )
