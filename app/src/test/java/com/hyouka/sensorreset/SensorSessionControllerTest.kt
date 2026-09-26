@@ -20,6 +20,14 @@ class SensorSessionControllerTest {
     }
 
     @Test
+    fun allSupportedSensorsAreIncludedInTheRestartSet() {
+        val restartSet = allSupportedMotionSensors()
+
+        assertEquals(MotionSensor.entries.toSet(), restartSet.toSet())
+        assertEquals(MotionSensor.entries.size, restartSet.size)
+    }
+
+    @Test
     fun runningVectorStatsComputeMeanAndStandardDeviation() {
         val stats = RunningVectorStats()
         stats.add(floatArrayOf(1f, 2f, 3f))
@@ -34,11 +42,19 @@ class SensorSessionControllerTest {
     fun healthEvaluatorDistinguishesUnavailableStalledAndHealthySensors() {
         assertEquals(
             SensorHealthStatus.UNAVAILABLE,
-            evaluateSensorHealth(available = false, eventCount = 0, accuracy = SensorManager.SENSOR_STATUS_UNRELIABLE)
+            evaluateSensorHealth(
+                available = false,
+                eventCount = 0,
+                accuracy = SensorManager.SENSOR_STATUS_UNRELIABLE
+            )
         )
         assertEquals(
             SensorHealthStatus.WARNING,
-            evaluateSensorHealth(available = true, eventCount = 0, accuracy = SensorManager.SENSOR_STATUS_ACCURACY_HIGH)
+            evaluateSensorHealth(
+                available = true,
+                eventCount = 0,
+                accuracy = SensorManager.SENSOR_STATUS_ACCURACY_HIGH
+            )
         )
         assertEquals(
             SensorHealthStatus.WARNING,
@@ -66,7 +82,11 @@ class SensorSessionControllerTest {
         )
         assertEquals(
             SensorHealthStatus.PASS,
-            evaluateSensorHealth(available = true, eventCount = 3, accuracy = SensorManager.SENSOR_STATUS_ACCURACY_HIGH)
+            evaluateSensorHealth(
+                available = true,
+                eventCount = 3,
+                accuracy = SensorManager.SENSOR_STATUS_ACCURACY_HIGH
+            )
         )
     }
 
