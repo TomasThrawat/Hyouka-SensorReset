@@ -1,10 +1,10 @@
 package com.hyouka.sensorreset
 
-fun allSupportedMotionSensors(): List<MotionSensor> = MotionSensor.entries
-
 import android.hardware.SensorManager
 import kotlin.math.max
 import kotlin.math.sqrt
+
+fun allSupportedMotionSensors(): List<MotionSensor> = MotionSensor.entries
 
 class RunningVectorStats {
     private var means = DoubleArray(0)
