@@ -451,7 +451,7 @@ private fun SensorCard(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Metric("Events", reading.eventCount.toString())
-            Metric("Rate", reading.actualHz?.let { formatFloat(it) + " Hz" } ?: "—")
+            Metric("Avg rate", reading.actualHz?.let { formatFloat(it) + " Hz" } ?: "—")
             Metric(
                 "Accuracy",
                 accuracyLabel(reading.accuracy)
@@ -478,6 +478,10 @@ private fun SensorCard(
         InfoRow("Min delay", capability?.minDelayUs?.let { "$it µs" } ?: "—")
         InfoRow("Max delay", capability?.maxDelayUs?.let { "$it µs" } ?: "—")
         InfoRow("FIFO max events", capability?.fifoMaxEventCount?.toString() ?: "—")
+        InfoRow("Reporting mode", capability?.reportingMode?.toString() ?: "—")
+        InfoRow("Wake-up sensor", capability?.wakeUpSensor?.toString() ?: "—")
+        InfoRow("Sensor ID", capability?.sensorId?.toString() ?: "—")
+        InfoRow("Requested profile", "SENSOR_DELAY_GAME")
 
         comparison?.let {
             Text(
@@ -499,7 +503,7 @@ private fun HealthCard(state: SensorUiState) {
             val reading = state.readings[sensor]
             val capability = state.capabilities[sensor]
             val status = evaluateSensorHealth(
-                available = capability?.available == true,
+                available = reading?.available == true,
                 eventCount = reading?.eventCount ?: 0L,
                 accuracy = reading?.accuracy ?: 0,
                 stalled = reading?.stalled == true
@@ -524,7 +528,7 @@ private fun HealthCard(state: SensorUiState) {
             }
         }
         Text(
-            "PASS means the sensor is available, producing events, and not reporting unreliable accuracy. WARNING is a diagnostic signal, not proof of hardware failure.",
+            "PASS means the registered sensor is producing events with medium or high accuracy. WARNING is a diagnostic signal, not proof of hardware failure.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
