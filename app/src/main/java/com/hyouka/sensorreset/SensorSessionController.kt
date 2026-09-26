@@ -336,7 +336,7 @@ class SensorSessionController(
         }
     }
 
-    fun startCalibration() { {
+    fun startCalibration() {
         if (uiState.calibrationActive) return
         if (!uiState.running) start()
 
