@@ -51,6 +51,7 @@ class SensorSessionController(
     private var registeredSensors = emptyMap<MotionSensor, Sensor>()
     private var sessionStartElapsedNanos = 0L
     private var preResetValues = emptyMap<MotionSensor, FloatArray>()
+    private var calibrationStartElapsedNanos = 0L
 
     var uiState by mutableStateOf(loadInitialState())
         private set
@@ -241,7 +242,7 @@ class SensorSessionController(
             .toList()
         val eventCount = totalEventCount()
 
-        if (availableSensors.isNotEmpty() || eventCount > 0L) {
+        run {
             val entry = ResetHistoryEntry(
                 timestampEpochMs = System.currentTimeMillis(),
                 availableSensorCount = availableSensors.size,
@@ -298,6 +299,7 @@ class SensorSessionController(
             calibrationStartedEpochMs = System.currentTimeMillis(),
             calibrationStats = emptyMap()
         )
+        calibrationStartElapsedNanos = SystemClock.elapsedRealtimeNanos()
         addLog("CALIBRATION session started")
     }
 
@@ -309,10 +311,19 @@ class SensorSessionController(
         val result = CalibrationSessionResult(
             startedAtEpochMs = started,
             endedAtEpochMs = ended,
-            durationMs = max(0L, ended - started),
+            durationMs = if (calibrationStartElapsedNanos != 0L) {
+                max(
+                    0L,
+                    (SystemClock.elapsedRealtimeNanos() - calibrationStartElapsedNanos) /
+                        1_000_000L
+                )
+            } else {
+                max(0L, ended - started)
+            },
             sensors = uiState.calibrationStats
         )
 
+        calibrationStartElapsedNanos = 0L
         calibrationAccumulators.clear()
         uiState = uiState.copy(
             calibrationActive = false,
@@ -523,14 +534,14 @@ class SensorSessionController(
         builder.appendLine("Generated: " + formatDateTime(System.currentTimeMillis()))
         builder.appendLine("Device: " + Build.MANUFACTURER + " " + Build.MODEL)
         builder.appendLine("Android API: " + Build.VERSION.SDK_INT)
-        builder.appendLine("App target API: 36")
+        builder.appendLine("App target API: " + appContext.applicationInfo.targetSdkVersion)
         builder.appendLine()
 
         MotionSensor.entries.forEach { sensor ->
             val capability = uiState.capabilities[sensor]
             val reading = uiState.readings[sensor]
             val health = evaluateSensorHealth(
-                capability?.available == true,
+                reading?.available == true,
                 reading?.eventCount ?: 0L,
                 reading?.accuracy ?: SensorManager.SENSOR_STATUS_UNRELIABLE,
                 reading?.stalled == true
@@ -557,6 +568,9 @@ class SensorSessionController(
             builder.appendLine("Min delay: " + (capability?.minDelayUs ?: "—") + " us")
             builder.appendLine("Max delay: " + (capability?.maxDelayUs ?: "—") + " us")
             builder.appendLine("FIFO max events: " + (capability?.fifoMaxEventCount ?: "—"))
+            builder.appendLine("Reporting mode: " + (capability?.reportingMode ?: "—"))
+            builder.appendLine("Wake-up sensor: " + (capability?.wakeUpSensor ?: "—"))
+            builder.appendLine("Sensor ID: " + (capability?.sensorId ?: "—"))
             builder.appendLine("Events: " + (reading?.eventCount ?: 0L))
             builder.appendLine("Actual rate: " + (reading?.actualHz?.let(::formatFloat) ?: "—") + " Hz")
             builder.appendLine("Accuracy: " + (reading?.accuracy ?: "—"))
@@ -665,6 +679,9 @@ class SensorSessionController(
                     .put("minDelayUs", capability?.minDelayUs ?: JSONObject.NULL)
                     .put("maxDelayUs", capability?.maxDelayUs ?: JSONObject.NULL)
                     .put("fifoMaxEventCount", capability?.fifoMaxEventCount ?: JSONObject.NULL)
+                    .put("reportingMode", capability?.reportingMode ?: JSONObject.NULL)
+                    .put("wakeUpSensor", capability?.wakeUpSensor ?: JSONObject.NULL)
+                    .put("sensorId", capability?.sensorId ?: JSONObject.NULL)
                     .put("eventCount", reading?.eventCount ?: 0L)
                     .put("actualHz", reading?.actualHz ?: JSONObject.NULL)
                     .put("accuracy", reading?.accuracy ?: JSONObject.NULL)
@@ -672,7 +689,7 @@ class SensorSessionController(
                     .put(
                         "health",
                         evaluateSensorHealth(
-                            capability?.available == true,
+                            reading?.available == true,
                             reading?.eventCount ?: 0L,
                             reading?.accuracy ?: SensorManager.SENSOR_STATUS_UNRELIABLE,
                             reading?.stalled == true
@@ -731,6 +748,10 @@ class SensorSessionController(
         }
 
         root.put("debugLog", JSONArray(uiState.logs))
+        root.put(
+            "scopeNote",
+            "App-level sensor listener reinitialization and diagnostics only; no firmware reset or hardware calibration claim."
+        )
         return root.toString(2)
     }
 
