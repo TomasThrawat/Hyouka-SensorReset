@@ -5,42 +5,40 @@ import kotlin.math.max
 import kotlin.math.sqrt
 
 class RunningVectorStats {
-    private var sums = DoubleArray(0)
-    private var sumSquares = DoubleArray(0)
+    private var means = DoubleArray(0)
+    private var m2 = DoubleArray(0)
 
     var count: Long = 0
         private set
 
     fun add(values: FloatArray) {
         if (values.isEmpty()) return
-        if (sums.isEmpty()) {
+        if (means.isEmpty()) {
             val size = minOf(values.size, 3)
-            sums = DoubleArray(size)
-            sumSquares = DoubleArray(size)
+            means = DoubleArray(size)
+            m2 = DoubleArray(size)
         }
 
-        val size = minOf(values.size, sums.size)
+        val size = minOf(values.size, means.size)
+        count++
+
         for (index in 0 until size) {
             val value = values[index].toDouble()
-            sums[index] += value
-            sumSquares[index] += value * value
+            val delta = value - means[index]
+            means[index] += delta / count
+            val delta2 = value - means[index]
+            m2[index] += delta * delta2
         }
-        count++
     }
 
     fun mean(): FloatArray {
-        if (count == 0L) return FloatArray(sums.size)
-        return FloatArray(sums.size) { index ->
-            (sums[index] / count).toFloat()
-        }
+        return FloatArray(means.size) { index -> means[index].toFloat() }
     }
 
     fun standardDeviation(): FloatArray {
-        if (count == 0L) return FloatArray(sums.size)
-        return FloatArray(sums.size) { index ->
-            val mean = sums[index] / count
-            val variance = max(0.0, sumSquares[index] / count - mean * mean)
-            sqrt(variance).toFloat()
+        if (count == 0L) return FloatArray(means.size)
+        return FloatArray(means.size) { index ->
+            sqrt(max(0.0, m2[index] / count)).toFloat()
         }
     }
 }
@@ -58,10 +56,21 @@ fun evaluateSensorHealth(
     stalled: Boolean = false
 ): SensorHealthStatus {
     if (!available) return SensorHealthStatus.UNAVAILABLE
-    if (eventCount == 0L || stalled || accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) {
+
+    if (
+        eventCount == 0L ||
+        stalled ||
+        accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE ||
+        accuracy == SensorManager.SENSOR_STATUS_ACCURACY_LOW
+    ) {
         return SensorHealthStatus.WARNING
     }
-    return SensorHealthStatus.PASS
+
+    return when (accuracy) {
+        SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM,
+        SensorManager.SENSOR_STATUS_ACCURACY_HIGH -> SensorHealthStatus.PASS
+        else -> SensorHealthStatus.WARNING
+    }
 }
 
 data class VectorComparison(
