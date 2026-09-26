@@ -111,7 +111,6 @@ class SystemSensorResetUserService : ISystemSensorResetService.Stub() {
 
     private fun sanitize(output: String): String {
         return output.replace("\n", " ").replace("|", "/").take(MAX_OUTPUT)
-", " ").replace("|", "/").take(MAX_OUTPUT)
     }
 
     private data class CommandResult(val exitCode: Int, val output: String)
