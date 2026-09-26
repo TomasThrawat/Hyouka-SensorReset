@@ -142,11 +142,11 @@ class SensorSessionController(
 
         val registered = linkedMapOf<MotionSensor, Sensor>()
         val capabilities = linkedMapOf<MotionSensor, SensorCapabilities>()
-        val readings = MotionSensor.entries
+        val readings = allSupportedMotionSensors()
             .associateWith { SensorReading(available = false) }
             .toMutableMap()
 
-        MotionSensor.entries.forEach { motionSensor ->
+        allSupportedMotionSensors().forEach { motionSensor ->
             val sensor = sensorManager.getDefaultSensor(motionSensor.sensorType)
             if (sensor == null) {
                 capabilities[motionSensor] = SensorCapabilities(available = false)
@@ -195,13 +195,13 @@ class SensorSessionController(
             running = true,
             sessionStartedEpochMs = System.currentTimeMillis(),
             sessionDurationMs = 0L,
-            comparisons = MotionSensor.entries.associateWith { null }
+            comparisons = allSupportedMotionSensors().associateWith { null }
         )
         addLog(
             "START session; registered " +
                 registeredSensors.size +
                 "/" +
-                MotionSensor.entries.size +
+                allSupportedMotionSensors().size +
                 " sensors"
         )
     }
@@ -229,7 +229,7 @@ class SensorSessionController(
         )
     }
 
-    fun reset() {
+    fun restartAllSensors() {
         val snapshot = uiState.readings
             .filterValues { it.values.isNotEmpty() }
             .mapValues { (_, reading) -> reading.values.toFloatArray() }
@@ -277,7 +277,7 @@ class SensorSessionController(
             lastResetEpochMs = resetTime,
             running = false,
             sessionDurationMs = duration,
-            comparisons = MotionSensor.entries.associateWith { null }
+            comparisons = allSupportedMotionSensors().associateWith { null }
         )
         addLog(
             "RESET session; pre-reset sensors=" +

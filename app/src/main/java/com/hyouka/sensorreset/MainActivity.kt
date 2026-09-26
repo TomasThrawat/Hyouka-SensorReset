@@ -198,7 +198,7 @@ private fun SensorResetScreen() {
             ResetCard(
                 resetCount = state.resetCount,
                 lastResetEpochMs = state.lastResetEpochMs,
-                onReset = controller::reset
+                onReset = controller::restartAllSensors
             )
 
             when (mode) {
@@ -324,12 +324,12 @@ private fun ResetCard(
 ) {
     SectionCard {
         Text(
-            "Reinitialize sensor session",
+            "Restart all sensors",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold
         )
         Text(
-            "Stops the active listeners, clears app session readings, and registers the supported sensors again.",
+            "Stops the active listeners, clears app session readings, and registers all supported sensors again.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -341,7 +341,7 @@ private fun ResetCard(
         ) {
             Icon(Icons.Default.Refresh, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("Reset sensors")
+            Text("Restart all sensors")
             Spacer(Modifier.width(6.dp))
             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
         }
@@ -351,12 +351,12 @@ private fun ResetCard(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                "Resets: " + resetCount,
+                "Restarts: " + resetCount,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                lastResetEpochMs?.let(::formatClock) ?: "Not reset yet",
+                lastResetEpochMs?.let(::formatClock) ?: "Not restarted yet",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

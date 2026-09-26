@@ -1,5 +1,7 @@
 package com.hyouka.sensorreset
 
+fun allSupportedMotionSensors(): List<MotionSensor> = MotionSensor.entries
+
 import android.hardware.SensorManager
 import kotlin.math.max
 import kotlin.math.sqrt
