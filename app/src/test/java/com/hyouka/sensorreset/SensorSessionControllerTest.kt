@@ -91,6 +91,20 @@ class SensorSessionControllerTest {
     }
 
     @Test
+    fun systemResetCommandContractUsesSensorServiceRestrictAndEnable() {
+        val commands = systemSensorResetCommands("com.hyouka.sensorreset")
+
+        assertEquals(
+            listOf("dumpsys", "sensorservice", "restrict", "com.hyouka.sensorreset"),
+            commands[0]
+        )
+        assertEquals(
+            listOf("dumpsys", "sensorservice", "enable"),
+            commands[1]
+        )
+    }
+
+    @Test
     fun vectorComparisonComputesAxisDelta() {
         val comparison = compareVectors(
             before = floatArrayOf(1f, 2f, 3f),
