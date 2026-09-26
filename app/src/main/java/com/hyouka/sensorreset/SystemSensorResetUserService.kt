@@ -1,43 +1,41 @@
 package com.hyouka.sensorreset
 
-import android.os.Parcel
+import android.content.Intent
+import android.os.IBinder
+import rikka.shizuku.Shizuku
 
-class SystemSensorResetUserService : ISystemSensorResetService.Stub() {
-    override fun cycleSensorService(packageName: String): String {
-        require(PACKAGE_NAME_PATTERN.matches(packageName)) { "Invalid package name" }
+class SystemSensorResetUserService : Shizuku.UserService() {
+    private val binder = object : ISystemSensorResetService.Stub() {
+        override fun cycleSensorService(packageName: String): String {
+            require(PACKAGE_NAME_PATTERN.matches(packageName)) { "Invalid package name" }
 
-        val commands = systemSensorResetCommands(packageName)
-        val restrict = runCommand(commands[0])
-        if (restrict.exitCode != 0) {
-            return "FAIL|stage=restrict|exit=" + restrict.exitCode +
-                "|output=" + sanitize(restrict.output)
-        }
-
-        val enable = runCommand(commands[1])
-        if (enable.exitCode != 0) {
-            val retry = runCommand(commands[1])
-            if (retry.exitCode != 0) {
-                return "FAIL|stage=enable|exit=" + enable.exitCode +
-                    "|output=" + sanitize(enable.output) +
-                    "|retry=" + sanitize(retry.output)
+            val commands = systemSensorResetCommands(packageName)
+            val restrict = runCommand(commands[0])
+            if (restrict.exitCode != 0) {
+                return "FAIL|stage=restrict|exit=" + restrict.exitCode +
+                    "|output=" + sanitize(restrict.output)
             }
+
+            val enable = runCommand(commands[1])
+            if (enable.exitCode != 0) {
+                val retry = runCommand(commands[1])
+                if (retry.exitCode != 0) {
+                    return "FAIL|stage=enable|exit=" + enable.exitCode +
+                        "|output=" + sanitize(enable.output) +
+                        "|retry=" + sanitize(retry.output)
+                }
+                return "OK|uid=" + android.os.Process.myUid() +
+                    "|restrict=" + restrict.exitCode +
+                    "|enable_retry=" + retry.exitCode
+            }
+
             return "OK|uid=" + android.os.Process.myUid() +
                 "|restrict=" + restrict.exitCode +
-                "|enable_retry=" + retry.exitCode
+                "|enable=" + enable.exitCode
         }
-
-        return "OK|uid=" + android.os.Process.myUid() +
-            "|restrict=" + restrict.exitCode +
-            "|enable=" + enable.exitCode
     }
 
-    override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
-        if (code == DESTROY_TRANSACTION) {
-            System.exit(0)
-            return true
-        }
-        return super.onTransact(code, data, reply, flags)
-    }
+    override fun onBind(intent: Intent): IBinder = binder
 
     private fun runCommand(command: List<String>): CommandResult {
         return runCatching {
@@ -58,8 +56,7 @@ class SystemSensorResetUserService : ISystemSensorResetService.Stub() {
     }
 
     private fun sanitize(output: String): String {
-        return output.replace("
-", " ").replace("|", "/").take(MAX_OUTPUT)
+        return output.replace("\n", " ").replace("|", "/").take(MAX_OUTPUT)
     }
 
     private data class CommandResult(
@@ -68,8 +65,7 @@ class SystemSensorResetUserService : ISystemSensorResetService.Stub() {
     )
 
     companion object {
-        private const val DESTROY_TRANSACTION = 16777115
         private const val MAX_OUTPUT = 240
-        private val PACKAGE_NAME_PATTERN = Regex("[A-Za-z0-9_\.]+")
+        private val PACKAGE_NAME_PATTERN = Regex("[A-Za-z0-9_\\.]+")
     }
 }
