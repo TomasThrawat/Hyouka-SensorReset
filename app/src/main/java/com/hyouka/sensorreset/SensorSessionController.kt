@@ -273,12 +273,12 @@ class SensorSessionController(
             running = false,
             sessionDurationMs = 0L,
             restartInProgress = true,
-            systemResetStatus = "Starting system SensorService cycle",
+            systemResetStatus = "Starting system-wide sensor cycle",
             comparisons = allSupportedMotionSensors().associateWith { null }
         )
 
         addLog(
-            "SYSTEM RESTART begin; requested SensorService restrict/enable via Shizuku; " +
+            "SYSTEM-WIDE RESET begin; requested SensorService restrict/enable across active sensors; " +
                 "previous duration=" +
                 formatDuration(previousDuration) +
                 ", events=" +
@@ -287,22 +287,25 @@ class SensorSessionController(
 
         systemSensorResetter.reset { result ->
             val status = if (result.success) {
-                "System SensorService cycle succeeded"
+                "System-wide sensor cycle succeeded"
             } else {
-                "Fallback: app listener restart only"
+                "System-wide sensor cycle failed; app listeners restored"
             }
 
             uiState = uiState.copy(systemResetStatus = status)
             addLog(
                 if (result.success) {
-                    "SYSTEM RESTART success; " + result.detail
+                    "SYSTEM-WIDE RESET success; " + result.detail
                 } else {
-                    "SYSTEM RESTART fallback; " + result.detail
+                    "SYSTEM-WIDE RESET failed; no app-only reset fallback; " + result.detail
                 }
             )
 
             if (wasRunning) {
                 start()
+                if (!result.success) {
+                    addLog("SESSION listeners restored after failed system-wide reset")
+                }
             }
 
             val restartCompletedEpochMs = System.currentTimeMillis()
@@ -326,7 +329,7 @@ class SensorSessionController(
             persistHistory(history)
 
             addLog(
-                "RESTART complete; registered " +
+                "SYSTEM-WIDE RESET finished; registered " +
                     registeredSensors.size +
                     "/" +
                     supportedSensorCount +

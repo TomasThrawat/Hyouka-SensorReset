@@ -91,7 +91,7 @@ class SensorSessionControllerTest {
     }
 
     @Test
-    fun systemResetCommandContractUsesSensorServiceRestrictAndEnable() {
+    fun systemWideResetCommandContractUsesSensorServiceRestrictAndEnable() {
         val commands = systemSensorResetCommands("com.hyouka.sensorreset")
 
         assertEquals(

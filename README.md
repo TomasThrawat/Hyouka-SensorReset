@@ -21,7 +21,9 @@ Native Kotlin Android utility for reinitializing motion sensors through Android 
 
 ## Scope
 
-The app performs app-level sensor listener reinitialization and diagnostics. It does **not** claim to recalibrate physical sensors or reset sensor firmware/driver state. Android public sensor APIs expose sensor metadata and event delivery, but hardware calibration/reset remains device/system controlled.
+The Restart action performs a **system-wide active-sensor cycle** through Android SensorService when Shizuku is authorized. It temporarily disables every sensor that is currently active through SensorService, not just this app's four displayed motion sensors, then restores the system sensor state. The app only re-registers its own listeners afterward.
+
+This does **not** claim to power-cycle the physical sensor IC, reset vendor firmware, or rebind a kernel driver. Those operations are device/vendor controlled and are not exposed by the standard Android sensor API.
 
 ## Build
 
@@ -31,14 +33,16 @@ Minimum Android API: 26
 Target Android API: 36
 
 
-## System sensor restart
+## System-wide sensor restart
 
-The Restart action first attempts a system SensorService cycle through a Shizuku UserService:
+The Restart action attempts a **system-wide active-sensor cycle** through a Shizuku UserService:
 
 1. dumpsys sensorservice restrict <this package>
 2. dumpsys sensorservice enable
-3. Re-register this app's sensor listeners.
+3. Re-register this app's sensor listeners after the system cycle.
 
-AOSP documents the restrict transition as temporarily disabling sensors and the enable transition as restoring normal operation and re-enabling them. This is a system sensor-service/HAL activation cycle, not a vendor driver rebind, firmware reboot, or physical power-cycle. The cycle can briefly affect other apps that use sensors.
+AOSP documents restrict as temporarily disabling active sensors and enable as restoring normal operation and re-enabling them. The package argument is only the temporary SensorService allowlist used during the restricted window; it does not limit the disable/enable operation to this app.
 
-Shizuku is required for this path. Without it, the app performs only its normal listener reinitialization and reports the fallback explicitly.
+The action has **no app-only reset fallback**. If the system-wide SensorService cycle fails, the UI reports failure and only restores this app's listeners so the app itself is left usable. This still is not a physical power-cycle, vendor firmware reset, or kernel-driver rebind.
+
+Shizuku authorization is required for the system-wide path.

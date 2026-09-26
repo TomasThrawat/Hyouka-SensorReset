@@ -330,12 +330,12 @@ private fun ResetCard(
 ) {
     SectionCard {
         Text(
-            "Restart all sensors",
+            "Restart all system sensors",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold
         )
         Text(
-            "With Shizuku authorized, this first cycles Android SensorService at system level, then reinitializes this app's listeners. Without privileged access, it falls back to app-level listener restart.",
+            "This temporarily disables every sensor currently active in Android SensorService for all apps, then restores the system sensor state. The app restores its own listeners afterward. This is not a physical sensor power-cycle or driver reset.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -348,7 +348,7 @@ private fun ResetCard(
         ) {
             Icon(Icons.Default.Refresh, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text(if (restartInProgress) "Restarting sensors…" else "Restart all sensors")
+            Text(if (restartInProgress) "Restarting system sensors…" else "Restart all system sensors")
             Spacer(Modifier.width(6.dp))
             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
         }
