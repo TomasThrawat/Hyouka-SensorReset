@@ -31,55 +31,45 @@ class SystemSensorResetter(
 
     private var permissionRequestPending = false
     private var callback: ((SystemSensorResetResult) -> Unit)? = null
+    private lateinit var serviceConnection: ServiceConnection
 
-    private val permissionListener =
-        Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
-            if (requestCode != REQUEST_CODE || !permissionRequestPending) {
-                return@OnRequestPermissionResultListener
-            }
-            permissionRequestPending = false
-            if (grantResult == PackageManager.PERMISSION_GRANTED) {
-                runBindAndReset()
-            } else {
-                finish(SystemSensorResetResult(false, "FAIL|stage=permission_denied"))
-            }
-        }
+    init {
+        serviceConnection = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName, service: IBinder) {
+                val pendingCallback = callback ?: return
+                callback = null
 
-    private val serviceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName, service: IBinder) {
-            val pendingCallback = callback ?: return
-            callback = null
+                Thread {
+                    val result = runCatching {
+                        ISystemSensorResetService.Stub.asInterface(service)
+                            .cycleSensorService(context.packageName)
+                    }.fold(
+                        onSuccess = { raw ->
+                            SystemSensorResetResult(raw.startsWith("OK|"), raw)
+                        },
+                        onFailure = { throwable ->
+                            SystemSensorResetResult(
+                                false,
+                                "FAIL|stage=binder|error=" +
+                                    throwable.javaClass.simpleName + ":" +
+                                    (throwable.message ?: "unknown")
+                            )
+                        }
+                    )
 
-            Thread {
-                val result = runCatching {
-                    ISystemSensorResetService.Stub.asInterface(service)
-                        .cycleSensorService(context.packageName)
-                }.fold(
-                    onSuccess = { raw ->
-                        SystemSensorResetResult(raw.startsWith("OK|"), raw)
-                    },
-                    onFailure = { throwable ->
-                        SystemSensorResetResult(
-                            false,
-                            "FAIL|stage=binder|error=" +
-                                throwable.javaClass.simpleName + ":" +
-                                (throwable.message ?: "unknown")
-                        )
+                    mainHandler.post {
+                        runCatching {
+                            Shizuku.unbindUserService(serviceArgs, serviceConnection, true)
+                        }
+                        pendingCallback(result)
                     }
-                )
+                }.start()
+            }
 
-                mainHandler.post {
-                    runCatching {
-                        Shizuku.unbindUserService(serviceArgs, serviceConnection, true)
-                    }
-                    pendingCallback(result)
+            override fun onServiceDisconnected(name: ComponentName) {
+                if (callback != null) {
+                    finish(SystemSensorResetResult(false, "FAIL|stage=service_disconnect"))
                 }
-            }.start()
-        }
-
-        override fun onServiceDisconnected(name: ComponentName) {
-            if (callback != null) {
-                finish(SystemSensorResetResult(false, "FAIL|stage=service_disconnect"))
             }
         }
     }
@@ -122,6 +112,19 @@ class SystemSensorResetter(
         }
     }
 
+    private val permissionListener =
+        Shizuku.OnRequestPermissionResultListener { requestCode: Int, grantResult: Int ->
+            if (requestCode != REQUEST_CODE || !permissionRequestPending) {
+                return@OnRequestPermissionResultListener
+            }
+            permissionRequestPending = false
+            if (grantResult == PackageManager.PERMISSION_GRANTED) {
+                runBindAndReset()
+            } else {
+                finish(SystemSensorResetResult(false, "FAIL|stage=permission_denied"))
+            }
+        }
+
     private fun runBindAndReset() {
         runCatching {
             Shizuku.removeRequestPermissionResultListener(permissionListener)
@@ -148,7 +151,7 @@ class SystemSensorResetter(
 
     companion object {
         private const val REQUEST_CODE = 4107
-        private const val SERVICE_VERSION = 2
+        private const val SERVICE_VERSION = 3
     }
 }
 
