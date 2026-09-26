@@ -52,6 +52,7 @@ class SensorSessionController(
     private var sessionStartElapsedNanos = 0L
     private var preResetValues = emptyMap<MotionSensor, FloatArray>()
     private var calibrationStartElapsedNanos = 0L
+    private val systemSensorResetter = SystemSensorResetter(appContext)
 
     var uiState by mutableStateOf(loadInitialState())
         private set
@@ -230,6 +231,8 @@ class SensorSessionController(
     }
 
     fun restartAllSensors() {
+        if (uiState.restartInProgress) return
+
         if (uiState.calibrationActive) {
             finishCalibration()
         }
@@ -247,9 +250,8 @@ class SensorSessionController(
         val eventCount = totalEventCount()
         val nextResetCount = uiState.resetCount + 1
         val supportedSensorCount = allSupportedMotionSensors().size
+        val wasRunning = uiState.running
 
-        // Explicit app-level restart boundary: unregister first, clear the old session,
-        // then start a fresh registration cycle.
         sensorManager.unregisterListener(listener)
         registeredSensors = emptyMap()
         firstEventTimestampNanos.clear()
@@ -270,50 +272,71 @@ class SensorSessionController(
             resetCount = nextResetCount,
             running = false,
             sessionDurationMs = 0L,
+            restartInProgress = true,
+            systemResetStatus = "Starting system SensorService cycle",
             comparisons = allSupportedMotionSensors().associateWith { null }
         )
 
         addLog(
-            "RESTART begin; unregistered " +
-                registeredCountBeforeReset +
-                "/" +
-                supportedSensorCount +
-                " sensors; previous duration=" +
+            "SYSTEM RESTART begin; requested SensorService restrict/enable via Shizuku; " +
+                "previous duration=" +
                 formatDuration(previousDuration) +
                 ", events=" +
                 eventCount
         )
 
-        start()
+        systemSensorResetter.reset { result ->
+            val status = if (result.success) {
+                "System SensorService cycle succeeded"
+            } else {
+                "Fallback: app listener restart only"
+            }
 
-        val restartCompletedEpochMs = System.currentTimeMillis()
-        val entry = ResetHistoryEntry(
-            timestampEpochMs = restartCompletedEpochMs,
-            availableSensorCount = availableSensors.size,
-            registeredSensorCount = registeredCountBeforeReset,
-            eventCount = eventCount,
-            sessionDurationMs = previousDuration,
-            sensors = availableSensors
-        )
-        val history = (listOf(entry) + uiState.history).take(MAX_HISTORY)
+            uiState = uiState.copy(systemResetStatus = status)
+            addLog(
+                if (result.success) {
+                    "SYSTEM RESTART success; " + result.detail
+                } else {
+                    "SYSTEM RESTART fallback; " + result.detail
+                }
+            )
 
-        uiState = uiState.copy(
-            history = history,
-            lastResetEpochMs = restartCompletedEpochMs,
-            sessionDurationMs = 0L
-        )
-        persistHistory(history)
+            if (wasRunning) {
+                start()
+            }
 
-        addLog(
-            "RESTART complete; registered " +
-                registeredSensors.size +
-                "/" +
-                supportedSensorCount +
-                " sensors; new session duration=00:00"
-        )
+            val restartCompletedEpochMs = System.currentTimeMillis()
+            val entry = ResetHistoryEntry(
+                timestampEpochMs = restartCompletedEpochMs,
+                availableSensorCount = availableSensors.size,
+                registeredSensorCount = registeredCountBeforeReset,
+                eventCount = eventCount,
+                sessionDurationMs = previousDuration,
+                sensors = availableSensors
+            )
+            val history = (listOf(entry) + uiState.history).take(MAX_HISTORY)
+
+            uiState = uiState.copy(
+                history = history,
+                lastResetEpochMs = restartCompletedEpochMs,
+                sessionDurationMs = 0L,
+                restartInProgress = false,
+                systemResetStatus = status
+            )
+            persistHistory(history)
+
+            addLog(
+                "RESTART complete; registered " +
+                    registeredSensors.size +
+                    "/" +
+                    supportedSensorCount +
+                    " sensors; new session duration=00:00; systemReset=" +
+                    result.success
+            )
+        }
     }
 
-    fun startCalibration() {
+    fun startCalibration() { {
         if (uiState.calibrationActive) return
         if (!uiState.running) start()
 
@@ -607,6 +630,7 @@ class SensorSessionController(
         builder.appendLine("Running: " + uiState.running)
         builder.appendLine("Duration: " + formatDuration(uiState.sessionDurationMs))
         builder.appendLine("Reset count: " + uiState.resetCount)
+        builder.appendLine("System reset status: " + uiState.systemResetStatus)
         builder.appendLine(
             "Last reset: " +
                 (uiState.lastResetEpochMs?.let(::formatDateTime) ?: "Never")
@@ -654,8 +678,10 @@ class SensorSessionController(
         builder.appendLine(uiState.logs.joinToString(separator = "\n"))
         builder.appendLine()
         builder.appendLine(
-            "Hardware note: this app reinitializes app-level sensor listeners and records diagnostics. " +
-                "It does not claim to reset sensor firmware or perform hardware calibration."
+            "System reset note: with Shizuku authorization, Restart requests the Android SensorService " +
+                "restrict/enable cycle, which disables and re-enables sensors at the system sensor-service/HAL " +
+                "activation layer. This is not a driver rebind, firmware reset, or physical power-cycle. " +
+                "Without Shizuku, the app falls back to app-level listener reinitialization."
         )
 
         return builder.toString()
@@ -682,6 +708,7 @@ class SensorSessionController(
                         "lastResetEpochMs",
                         uiState.lastResetEpochMs ?: JSONObject.NULL
                     )
+                    .put("systemResetStatus", uiState.systemResetStatus)
             )
 
         val sensors = JSONObject()
@@ -774,7 +801,9 @@ class SensorSessionController(
         root.put("debugLog", JSONArray(uiState.logs))
         root.put(
             "scopeNote",
-            "App-level sensor listener reinitialization and diagnostics only; no firmware reset or hardware calibration claim."
+            "With Shizuku authorization, Restart performs the Android SensorService restrict/enable cycle " +
+                "before app listener reinitialization. This is a system sensor-service/HAL activation cycle, " +
+                "not a driver rebind, firmware reset, or physical power-cycle."
         )
         return root.toString(2)
     }
