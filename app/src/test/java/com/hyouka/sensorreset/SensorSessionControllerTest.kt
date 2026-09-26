@@ -42,7 +42,27 @@ class SensorSessionControllerTest {
         )
         assertEquals(
             SensorHealthStatus.WARNING,
-            evaluateSensorHealth(available = true, eventCount = 3, accuracy = SensorManager.SENSOR_STATUS_UNRELIABLE)
+            evaluateSensorHealth(
+                available = true,
+                eventCount = 3,
+                accuracy = SensorManager.SENSOR_STATUS_UNRELIABLE
+            )
+        )
+        assertEquals(
+            SensorHealthStatus.WARNING,
+            evaluateSensorHealth(
+                available = true,
+                eventCount = 3,
+                accuracy = SensorManager.SENSOR_STATUS_ACCURACY_LOW
+            )
+        )
+        assertEquals(
+            SensorHealthStatus.PASS,
+            evaluateSensorHealth(
+                available = true,
+                eventCount = 3,
+                accuracy = SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM
+            )
         )
         assertEquals(
             SensorHealthStatus.PASS,
