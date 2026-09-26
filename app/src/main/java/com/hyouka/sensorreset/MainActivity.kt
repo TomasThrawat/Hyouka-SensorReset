@@ -34,7 +34,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CompareArrows
+import androidx.compose.material.icons.automirrored.filled.CompareArrows
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
@@ -593,7 +593,7 @@ private fun CalibrationCard(
 @Composable
 private fun ComparisonCard(state: SensorUiState) {
     SectionCard {
-        SectionTitle(Icons.Default.CompareArrows, "Before / After Reset")
+        SectionTitle(Icons.AutoMirrored.Filled.CompareArrows, "Before / After Reset")
 
         val availableComparisons = state.comparisons.filterValues { it != null }
         if (availableComparisons.isEmpty()) {
