@@ -199,6 +199,8 @@ private fun SensorResetScreen() {
                 resetCount = state.resetCount,
                 lastResetEpochMs = state.lastResetEpochMs,
                 sessionDurationMs = state.sessionDurationMs,
+                restartInProgress = state.restartInProgress,
+                systemResetStatus = state.systemResetStatus,
                 onReset = controller::restartAllSensors
             )
 
@@ -322,6 +324,8 @@ private fun ResetCard(
     resetCount: Int,
     lastResetEpochMs: Long?,
     sessionDurationMs: Long,
+    restartInProgress: Boolean,
+    systemResetStatus: String,
     onReset: () -> Unit
 ) {
     SectionCard {
@@ -331,19 +335,20 @@ private fun ResetCard(
             fontWeight = FontWeight.SemiBold
         )
         Text(
-            "Unregisters the active listeners, clears the current session timer and readings, then registers every supported sensor again.",
+            "With Shizuku authorized, this first cycles Android SensorService at system level, then reinitializes this app's listeners. Without privileged access, it falls back to app-level listener restart.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Button(
             onClick = onReset,
+            enabled = !restartInProgress,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp)
         ) {
             Icon(Icons.Default.Refresh, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("Restart all sensors")
+            Text(if (restartInProgress) "Restarting sensors…" else "Restart all sensors")
             Spacer(Modifier.width(6.dp))
             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
         }
@@ -359,6 +364,11 @@ private fun ResetCard(
         Text(
             "Last restart: " + (lastResetEpochMs?.let(::formatClock) ?: "Not restarted yet"),
             style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            "System reset: " + systemResetStatus,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
@@ -755,7 +765,7 @@ private fun InfoCard() {
     SectionCard {
         SectionTitle(Icons.Default.Info, "Scope")
         Text(
-            "This app can reinitialize its own sensor listeners and measure sensor behavior exposed through Android public APIs. It cannot generally reset sensor firmware, driver state, or perform hardware calibration from a normal app.",
+            "With Shizuku authorized, this app requests Android SensorService to enter restricted mode and then return to normal, causing SensorService to disable and re-enable sensors. This is deeper than listener re-registration, but it is still not a driver rebind, firmware reset, or physical power-cycle. Without Shizuku, only app-level listener reinitialization is available.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
