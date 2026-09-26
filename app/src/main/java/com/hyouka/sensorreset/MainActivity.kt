@@ -201,6 +201,8 @@ private fun SensorResetScreen() {
                 onReset = controller::reset
             )
 
+            DisplayResetCard()
+
             when (mode) {
                 ScreenMode.NORMAL -> {
                     SensorStatusSummary(state)
@@ -361,6 +363,43 @@ private fun ResetCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+@Composable
+private fun DisplayResetCard() {
+    val context = LocalContext.current
+    val controller = remember { DisplayResetController(context) }
+    var result by remember { mutableStateOf(controller.inspect()) }
+
+    SectionCard {
+        SectionTitle(Icons.Default.Sensors, "Display pixels & contrast")
+
+        Text(
+            "Checks the physical display pixels and panel contrast. Refresh rate and display mode are intentionally not changed.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        InfoRow("Current pixels", result.currentPixels ?: "Unavailable")
+        InfoRow("Pixel reset", result.pixelResetStatus)
+        InfoRow("Contrast reset", result.contrastResetStatus)
+
+        Button(
+            onClick = { result = controller.reset() },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Icon(Icons.Default.Refresh, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Reset pixels & contrast")
+        }
+
+        Text(
+            result.summary,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
