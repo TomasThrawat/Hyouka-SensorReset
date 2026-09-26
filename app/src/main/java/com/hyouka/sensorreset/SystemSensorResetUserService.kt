@@ -1,41 +1,40 @@
 package com.hyouka.sensorreset
 
-import android.content.Intent
-import android.os.IBinder
-import rikka.shizuku.Shizuku
+import android.os.Binder
+import android.os.Parcel
 
-class SystemSensorResetUserService : Shizuku.UserService() {
-    private val binder = object : ISystemSensorResetService.Stub() {
-        override fun cycleSensorService(packageName: String): String {
-            require(PACKAGE_NAME_PATTERN.matches(packageName)) { "Invalid package name" }
+class SystemSensorResetUserService : ISystemSensorResetService.Stub() {
+    override fun cycleSensorService(packageName: String): String {
+        require(PACKAGE_NAME_PATTERN.matches(packageName)) { "Invalid package name" }
 
-            val commands = systemSensorResetCommands(packageName)
-            val restrict = runCommand(commands[0])
-            if (restrict.exitCode != 0) {
-                return "FAIL|stage=restrict|exit=" + restrict.exitCode +
-                    "|output=" + sanitize(restrict.output)
-            }
-
-            val enable = runCommand(commands[1])
-            if (enable.exitCode != 0) {
-                val retry = runCommand(commands[1])
-                if (retry.exitCode != 0) {
-                    return "FAIL|stage=enable|exit=" + enable.exitCode +
-                        "|output=" + sanitize(enable.output) +
-                        "|retry=" + sanitize(retry.output)
-                }
-                return "OK|uid=" + android.os.Process.myUid() +
-                    "|restrict=" + restrict.exitCode +
-                    "|enable_retry=" + retry.exitCode
-            }
-
-            return "OK|uid=" + android.os.Process.myUid() +
-                "|restrict=" + restrict.exitCode +
-                "|enable=" + enable.exitCode
+        val commands = systemSensorResetCommands(packageName)
+        val restrict = runCommand(commands[0])
+        if (restrict.exitCode != 0) {
+            return "FAIL|stage=restrict|exit=" + restrict.exitCode +
+                "|output=" + sanitize(restrict.output)
         }
+
+        val enable = runCommand(commands[1])
+        if (enable.exitCode != 0) {
+            val retry = runCommand(commands[1])
+            if (retry.exitCode != 0) {
+                return "FAIL|stage=enable|exit=" + enable.exitCode +
+                    "|output=" + sanitize(enable.output) +
+                    "|retry=" + sanitize(retry.output)
+            }
+            return "OK|uid=" + Binder.getCallingUid() +
+                "|restrict=" + restrict.exitCode +
+                "|enable_retry=" + retry.exitCode
+        }
+
+        return "OK|uid=" + Binder.getCallingUid() +
+            "|restrict=" + restrict.exitCode +
+            "|enable=" + enable.exitCode
     }
 
-    override fun onBind(intent: Intent): IBinder = binder
+    override fun destroy() {
+        System.exit(0)
+    }
 
     private fun runCommand(command: List<String>): CommandResult {
         return runCatching {
@@ -56,7 +55,7 @@ class SystemSensorResetUserService : Shizuku.UserService() {
     }
 
     private fun sanitize(output: String): String {
-        return output.replace("\n", " ").replace("|", "/").take(MAX_OUTPUT)
+        return output.replace("\\n", " ").replace("|", "/").take(MAX_OUTPUT)
     }
 
     private data class CommandResult(
@@ -66,6 +65,6 @@ class SystemSensorResetUserService : Shizuku.UserService() {
 
     companion object {
         private const val MAX_OUTPUT = 240
-        private val PACKAGE_NAME_PATTERN = Regex("[A-Za-z0-9_\\.]+")
+        private val PACKAGE_NAME_PATTERN = Regex("[A-Za-z0-9_\\\\.]+")
     }
 }
