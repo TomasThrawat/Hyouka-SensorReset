@@ -161,3 +161,14 @@ fun systemSensorResetCommands(packageName: String): List<List<String>> {
         listOf("dumpsys", "sensorservice", "enable")
     )
 }
+
+fun systemSensorHalRestartCommands(): List<List<String>> {
+    return listOf(
+        listOf("setprop", "ctl.interface_restart", "android.hardware.sensors@2.1::ISensors/default"),
+        listOf("setprop", "ctl.interface_restart", "android.hardware.sensors@2.0::ISensors/default"),
+        listOf("setprop", "ctl.interface_restart", "android.hardware.sensors@1.0::ISensors/default"),
+        listOf("setprop", "ctl.interface_restart", "android.hardware.sensors.ISensors/default"),
+        listOf("setprop", "ctl.restart", "sensors.qti")
+    )
+}
+
