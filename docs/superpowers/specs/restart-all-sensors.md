@@ -1,21 +1,29 @@
 # Restart All Sensors
 
 ## Goal
-Provide one Material You action that reinitializes every motion sensor supported by the app.
+
+Provide one Material You action that first attempts the deepest sensor reinitialization exposed through the device Android sensor service, then restores this app listeners and diagnostics.
 
 ## Behavior
-- Restart is an explicit lifecycle boundary: unregister the shared listener first, clear the current session timer and readings, then register all supported sensors again.
-- The new session duration starts at 00:00 after the restart completes.
-- Reset History timestamps are wall-clock restart times; the previous session duration is stored separately so a timestamp cannot be mistaken for sensor-open duration.
-- The action records the current session in the existing reset history.
-- The action unregisters the shared sensor listener from all registered sensors.
-- The action clears current app-level session readings and timing state.
-- The action registers every supported MotionSensor again.
-- Existing diagnostics, calibration history, comparison data, and debug logging remain functional.
-- The feature does not claim to reset sensor firmware, driver state, or hardware calibration.
 
-## UI
-Use the existing pure-black Material 3/Material You screen and replace the reset wording with a single Restart all sensors action.
+- The Restart action captures the current session for history and comparison.
+- It unregisters this app listeners before the system cycle.
+- With Shizuku authorization, a privileged UserService requests the SensorService restrict then enable shell sequence.
+- restrict temporarily disables active sensors and enable restores normal SensorService operation.
+- After the system cycle, the app registers all four supported motion sensors again.
+- If Shizuku is unavailable or denied, the app falls back to app-level listener reinitialization and records that fallback.
+- The previous session duration remains separate from the wall-clock restart timestamp.
+- This does not claim a vendor driver rebind, sensor firmware reboot, or physical sensor power-cycle.
+- The system cycle can temporarily affect other apps using sensors.
 
 ## Supported sensors
+
 Gyroscope, Accelerometer, Magnetometer, and Rotation Vector.
+
+## Privileged path
+
+The privileged operation is isolated in a Shizuku UserService. The normal app process never assumes shell or root identity.
+
+## UI
+
+Keep the existing pure-black Material 3 screen. The single action remains Restart all sensors, with live status showing whether the system cycle succeeded or fallback was used.
