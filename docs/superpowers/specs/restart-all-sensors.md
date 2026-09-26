@@ -27,3 +27,7 @@ The privileged operation is isolated in a Shizuku UserService. The normal app pr
 ## UI
 
 Keep the existing pure-black Material 3 screen. The single action remains Restart all sensors, with live status showing whether the system cycle succeeded or fallback was used.
+
+## HAL-level reset attempt
+
+After the SensorService system-wide disable step, the privileged UserService requests a Sensors HAL restart through Android init using ctl.interface_restart and ctl.restart. It discovers sensor-named init services, excludes sensorservice, and verifies a state or PID change when available. The result is unsuccessful when the HAL restart cannot be verified. No claim is made for physical IC power cycling or direct kernel-driver rebind.

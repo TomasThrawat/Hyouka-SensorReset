@@ -24,3 +24,7 @@
 - [x] Add unit test for the SensorService command contract.
 - [ ] Run full unit suite and debug APK build.
 - [ ] Inspect complete GitHub Actions job log and verify newest artifact.
+
+## HAL restart implementation
+
+Use Android init control messages through the Shizuku UserService after SensorService restriction. Request standard Sensors HAL interfaces, restart exposed sensor-named init services except sensorservice, verify service state or PID changes, then return SensorService to NORMAL mode. Treat permission denials and unverified restarts as failures.

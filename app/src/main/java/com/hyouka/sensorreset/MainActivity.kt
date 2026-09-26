@@ -335,7 +335,7 @@ private fun ResetCard(
             fontWeight = FontWeight.SemiBold
         )
         Text(
-            "This temporarily disables every sensor currently active in Android SensorService for all apps, then restores the system sensor state. The app restores its own listeners afterward. This is not a physical sensor power-cycle or driver reset.",
+            "This cycles Android SensorService system-wide, then attempts a real Sensors HAL restart through Android init. The app reports HAL success only after a verified service state or PID change. This is not a physical IC power-cycle.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -765,7 +765,7 @@ private fun InfoCard() {
     SectionCard {
         SectionTitle(Icons.Default.Info, "Scope")
         Text(
-            "With Shizuku authorized, this app requests Android SensorService to enter restricted mode and then return to normal, causing SensorService to disable and re-enable sensors. This is deeper than listener re-registration, but it is still not a driver rebind, firmware reset, or physical power-cycle. Without Shizuku, only app-level listener reinitialization is available.",
+            "With Shizuku authorized, this app performs a system-wide SensorService restrict/enable cycle and then attempts to restart the underlying Sensors HAL through Android init. The HAL result is reported only when a real service state or PID change is verified. A denied or unavailable init control path is reported as failure, not as a successful app-only reset. This still does not claim a physical IC power-cycle or direct kernel-driver rebind.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
