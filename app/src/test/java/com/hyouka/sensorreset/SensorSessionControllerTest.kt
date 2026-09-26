@@ -115,20 +115,18 @@ class SensorSessionControllerTest {
         assertArrayEquals(floatArrayOf(1f, -1f, 1f), comparison.delta, 0.0001f)
         assertEquals(1.0f, comparison.maxAbsoluteDelta, 0.0001f)
     }
-}
-
-
-@Test
-fun sensorHalRestartCommandContractUsesAndroidInitControlMessages() {
-    val commands = systemSensorHalRestartCommands()
-    assertTrue(commands.any {
-        it == listOf(
-            "setprop",
-            "ctl.interface_restart",
-            "android.hardware.sensors@2.1::ISensors/default"
-        )
-    })
-    assertTrue(commands.any {
-        it == listOf("setprop", "ctl.restart", "sensors.qti")
-    })
+    @Test
+    fun sensorHalRestartCommandContractUsesAndroidInitControlMessages() {
+        val commands = systemSensorHalRestartCommands()
+        assertTrue(commands.any {
+            it == listOf(
+                "setprop",
+                "ctl.interface_restart",
+                "android.hardware.sensors@2.1::ISensors/default"
+            )
+        })
+        assertTrue(commands.any {
+            it == listOf("setprop", "ctl.restart", "sensors.qti")
+        })
+    }
 }
