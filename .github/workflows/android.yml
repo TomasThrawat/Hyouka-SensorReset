@@ -1,5 +1,9 @@
 name: Android Build
 
+concurrency:
+  group: android-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ main ]
@@ -33,7 +37,7 @@ jobs:
         run: gradle :app:testDebugUnitTest --stacktrace
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: sensor-reset-debug
           path: app/build/outputs/apk/debug/app-debug.apk
