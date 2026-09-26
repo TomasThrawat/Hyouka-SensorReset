@@ -230,31 +230,26 @@ class SensorSessionController(
     }
 
     fun restartAllSensors() {
+        if (uiState.calibrationActive) {
+            finishCalibration()
+        }
+
         val snapshot = uiState.readings
             .filterValues { it.values.isNotEmpty() }
             .mapValues { (_, reading) -> reading.values.toFloatArray() }
 
-        val duration = currentSessionDuration()
+        val previousDuration = currentSessionDuration()
         val availableSensors = uiState.capabilities
             .filterValues { it.available }
             .keys
             .toList()
+        val registeredCountBeforeReset = registeredSensors.size
         val eventCount = totalEventCount()
+        val nextResetCount = uiState.resetCount + 1
+        val supportedSensorCount = allSupportedMotionSensors().size
 
-        run {
-            val entry = ResetHistoryEntry(
-                timestampEpochMs = System.currentTimeMillis(),
-                availableSensorCount = availableSensors.size,
-                registeredSensorCount = registeredSensors.size,
-                eventCount = eventCount,
-                sessionDurationMs = duration,
-                sensors = availableSensors
-            )
-            val history = (listOf(entry) + uiState.history).take(MAX_HISTORY)
-            uiState = uiState.copy(history = history)
-            persistHistory(history)
-        }
-
+        // Explicit app-level restart boundary: unregister first, clear the old session,
+        // then start a fresh registration cycle.
         sensorManager.unregisterListener(listener)
         registeredSensors = emptyMap()
         firstEventTimestampNanos.clear()
@@ -262,7 +257,6 @@ class SensorSessionController(
         preResetValues = snapshot
         postResetCaptured.clear()
 
-        val resetTime = System.currentTimeMillis()
         uiState = uiState.copy(
             readings = uiState.readings.mapValues { (_, reading) ->
                 reading.copy(
@@ -273,19 +267,50 @@ class SensorSessionController(
                     stalled = false
                 )
             },
-            resetCount = uiState.resetCount + 1,
-            lastResetEpochMs = resetTime,
+            resetCount = nextResetCount,
             running = false,
-            sessionDurationMs = duration,
+            sessionDurationMs = 0L,
             comparisons = allSupportedMotionSensors().associateWith { null }
         )
+
         addLog(
-            "RESET session; pre-reset sensors=" +
-                snapshot.size +
+            "RESTART begin; unregistered " +
+                registeredCountBeforeReset +
+                "/" +
+                supportedSensorCount +
+                " sensors; previous duration=" +
+                formatDuration(previousDuration) +
                 ", events=" +
                 eventCount
         )
+
         start()
+
+        val restartCompletedEpochMs = System.currentTimeMillis()
+        val entry = ResetHistoryEntry(
+            timestampEpochMs = restartCompletedEpochMs,
+            availableSensorCount = availableSensors.size,
+            registeredSensorCount = registeredCountBeforeReset,
+            eventCount = eventCount,
+            sessionDurationMs = previousDuration,
+            sensors = availableSensors
+        )
+        val history = (listOf(entry) + uiState.history).take(MAX_HISTORY)
+
+        uiState = uiState.copy(
+            history = history,
+            lastResetEpochMs = restartCompletedEpochMs,
+            sessionDurationMs = 0L
+        )
+        persistHistory(history)
+
+        addLog(
+            "RESTART complete; registered " +
+                registeredSensors.size +
+                "/" +
+                supportedSensorCount +
+                " sensors; new session duration=00:00"
+        )
     }
 
     fun startCalibration() {

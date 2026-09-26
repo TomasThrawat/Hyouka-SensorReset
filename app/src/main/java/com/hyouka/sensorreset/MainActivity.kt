@@ -198,6 +198,7 @@ private fun SensorResetScreen() {
             ResetCard(
                 resetCount = state.resetCount,
                 lastResetEpochMs = state.lastResetEpochMs,
+                sessionDurationMs = state.sessionDurationMs,
                 onReset = controller::restartAllSensors
             )
 
@@ -320,6 +321,7 @@ private fun ModeSelector(
 private fun ResetCard(
     resetCount: Int,
     lastResetEpochMs: Long?,
+    sessionDurationMs: Long,
     onReset: () -> Unit
 ) {
     SectionCard {
@@ -329,7 +331,7 @@ private fun ResetCard(
             fontWeight = FontWeight.SemiBold
         )
         Text(
-            "Stops the active listeners, clears app session readings, and registers all supported sensors again.",
+            "Unregisters the active listeners, clears the current session timer and readings, then registers every supported sensor again.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -350,17 +352,15 @@ private fun ResetCard(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                "Restarts: " + resetCount,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                lastResetEpochMs?.let(::formatClock) ?: "Not restarted yet",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Metric("Restarts", resetCount.toString())
+            Metric("Current session", formatDuration(sessionDurationMs))
         }
+
+        Text(
+            "Last restart: " + (lastResetEpochMs?.let(::formatClock) ?: "Not restarted yet"),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -641,18 +641,18 @@ private fun HistoryCard(history: List<ResetHistoryEntry>) {
                 verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 Text(
-                    formatDateTime(entry.timestampEpochMs),
+                    "Restarted at " + formatClock(entry.timestampEpochMs),
                     style = MaterialTheme.typography.labelLarge
                 )
                 Text(
-                    "Sensors " +
+                    "Previous session: " +
+                        formatDuration(entry.sessionDurationMs) +
+                        " • Sensors " +
                         entry.availableSensorCount +
                         " • Registered " +
                         entry.registeredSensorCount +
                         " • Events " +
-                        entry.eventCount +
-                        " • Duration " +
-                        formatDuration(entry.sessionDurationMs),
+                        entry.eventCount,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
