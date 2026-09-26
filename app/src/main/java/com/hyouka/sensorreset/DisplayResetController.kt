@@ -1,7 +1,6 @@
 package com.hyouka.sensorreset
 
 import android.content.Context
-import android.graphics.Point
 import android.hardware.display.DisplayManager
 import android.view.Display
 
@@ -19,7 +18,9 @@ class DisplayResetController(context: Context) {
 
     fun inspect(): DisplayResetResult {
         val display = displayManager?.getDisplay(Display.DEFAULT_DISPLAY)
-        val pixels = display?.let(::readDisplayPixels)
+        val pixels = display?.mode?.let { mode ->
+            mode.physicalWidth.toString() + " × " + mode.physicalHeight.toString()
+        }
 
         return DisplayResetResult(
             currentPixels = pixels,
@@ -34,12 +35,5 @@ class DisplayResetController(context: Context) {
         return inspect().copy(
             summary = "Display reset not working: the requested physical pixel and panel-contrast reset is not exposed to third-party apps through Android public APIs."
         )
-    }
-
-    private fun readDisplayPixels(display: Display): String {
-        val point = Point()
-        @Suppress("DEPRECATION")
-        display.getRealSize(point)
-        return point.x.toString() + " × " + point.y.toString()
     }
 }
