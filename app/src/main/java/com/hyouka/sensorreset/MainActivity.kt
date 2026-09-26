@@ -1,11 +1,12 @@
 package com.hyouka.sensorreset
 
+import android.hardware.SensorManager
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,7 +34,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -44,7 +44,6 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -96,7 +95,6 @@ private fun SensorResetTheme(content: @Composable () -> Unit) {
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SensorResetScreen() {
     val context = LocalContext.current
@@ -202,7 +200,7 @@ private fun ResetCard(
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF0B0B0B)
         ),
-        border = androidx.compose.foundation.BorderStroke(
+        border = BorderStroke(
             1.dp,
             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
         )
@@ -270,7 +268,7 @@ private fun SensorCard(sensor: MotionSensor, reading: SensorReading) {
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF080808)
         ),
-        border = androidx.compose.foundation.BorderStroke(
+        border = BorderStroke(
             1.dp,
             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
         )
@@ -323,21 +321,9 @@ private fun SensorCard(sensor: MotionSensor, reading: SensorReading) {
                 )
             }
 
-            AxisRow(
-                "X",
-                reading.values.getOrNull(0),
-                sensor.unit
-            )
-            AxisRow(
-                "Y",
-                reading.values.getOrNull(1),
-                sensor.unit
-            )
-            AxisRow(
-                "Z",
-                reading.values.getOrNull(2),
-                sensor.unit
-            )
+            AxisRow("X", reading.values.getOrNull(0), sensor.unit)
+            AxisRow("Y", reading.values.getOrNull(1), sensor.unit)
+            AxisRow("Z", reading.values.getOrNull(2), sensor.unit)
         }
     }
 }
@@ -355,7 +341,7 @@ private fun AxisRow(label: String, value: Float?, unit: String) {
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = value?.let { formatAxis(it) } ?: "—",
+            text = value?.let(::formatAxis) ?: "—",
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium
@@ -385,7 +371,7 @@ private fun InfoCard() {
 }
 
 private fun formatAxis(value: Float): String =
-    String.format(Locale.US, "% .5f", value).trim()
+    String.format(Locale.US, "%.5f", value)
 
 private fun formatTime(epochMs: Long): String =
     SimpleDateFormat("HH:mm:ss", Locale.US).format(Date(epochMs))
