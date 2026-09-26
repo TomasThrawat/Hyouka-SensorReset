@@ -186,7 +186,6 @@ class SensorSessionController(
         firstEventTimestampNanos.clear()
         lastEventTimestampNanos.clear()
         sessionStartElapsedNanos = SystemClock.elapsedRealtimeNanos()
-        preResetValues = emptyMap()
         postResetCaptured.clear()
 
         uiState = uiState.copy(
@@ -216,6 +215,7 @@ class SensorSessionController(
         sensorManager.unregisterListener(listener)
         registeredSensors = emptyMap()
         sessionStartElapsedNanos = 0L
+        preResetValues = emptyMap()
 
         uiState = uiState.copy(
             running = false,
